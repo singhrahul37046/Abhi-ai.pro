@@ -110,6 +110,11 @@
             background: #764ba2;
         }
 
+        .setup-section button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
         .chat-container {
             flex: 1;
             overflow-y: auto;
@@ -303,7 +308,7 @@
                 placeholder="sk-ant-xxxxxxxxxxxxx" 
                 required
             >
-            <button onclick="startChat()">✅ Connect</button>
+            <button onclick="startChat()" id="connectBtn">✅ Connect</button>
             <div class="error" id="setupError" style="display:none;"></div>
         </div>
 
@@ -319,7 +324,7 @@
                 placeholder="Kuch bhi likho..." 
                 onkeypress="handleEnter(event)"
             >
-            <button onclick="sendMessage()">📤 Send</button>
+            <button onclick="sendMessage()" id="sendBtn">📤 Send</button>
         </div>
     </div>
 
@@ -330,6 +335,7 @@
         async function startChat() {
             const keyInput = document.getElementById('apiKeyInput').value.trim();
             const setupError = document.getElementById('setupError');
+            const connectBtn = document.getElementById('connectBtn');
 
             if (!keyInput) {
                 setupError.textContent = "❌ API key zaruri hai!";
@@ -343,17 +349,53 @@
                 return;
             }
 
-            apiKey = keyInput;
-            
-            // Switch to chat view
-            document.getElementById('setupSection').classList.remove('active');
-            document.getElementById('chatContainer').classList.add('active');
-            document.getElementById('inputSection').style.display = 'flex';
-            document.getElementById('logoutBtn').classList.add('show');
+            // Test the API key
+            connectBtn.disabled = true;
+            connectBtn.textContent = "⏳ Testing...";
 
-            // Add welcome message
-            addMessage("👋 Namaste! Main Abhi hoon, Claude AI. Kuch bhi pooch sakte ho!", 'ai');
-            conversationHistory = [];
+            try {
+                const testResponse = await fetch('/api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        messages: [{ role: "user", content: "Hi" }],
+                        apiKey: keyInput
+                    })
+                });
+
+                if (!testResponse.ok) {
+                    const error = await testResponse.json();
+                    setupError.textContent = error.error || "❌ API key invalid hai!";
+                    setupError.style.display = 'block';
+                    connectBtn.disabled = false;
+                    connectBtn.textContent = "✅ Connect";
+                    return;
+                }
+
+                apiKey = keyInput;
+                setupError.style.display = 'none';
+                
+                // Switch to chat view
+                document.getElementById('setupSection').classList.remove('active');
+                document.getElementById('chatContainer').classList.add('active');
+                document.getElementById('inputSection').style.display = 'flex';
+                document.getElementById('logoutBtn').classList.add('show');
+
+                // Add welcome message
+                addMessage("👋 Namaste! Main Abhi hoon, Claude AI. Kuch bhi pooch sakte ho!", 'ai');
+                conversationHistory = [];
+                
+                document.getElementById('userInput').focus();
+                connectBtn.disabled = false;
+                connectBtn.textContent = "✅ Connect";
+            } catch (error) {
+                setupError.textContent = `❌ Network Error: ${error.message}`;
+                setupError.style.display = 'block';
+                connectBtn.disabled = false;
+                connectBtn.textContent = "✅ Connect";
+            }
         }
 
         function logout() {
@@ -366,12 +408,15 @@
             document.getElementById('apiKeyInput').value = '';
             document.getElementById('messages').innerHTML = '';
             document.getElementById('setupError').style.display = 'none';
+            document.getElementById('apiKeyInput').focus();
         }
 
         document.getElementById('logoutBtn').addEventListener('click', logout);
 
         async function sendMessage() {
             const userInput = document.getElementById('userInput').value.trim();
+            const sendBtn = document.getElementById('sendBtn');
+            
             if (!userInput) return;
 
             if (!apiKey) {
@@ -393,20 +438,18 @@
             // Show loading
             const loadingId = 'loading-' + Date.now();
             addLoadingMessage(loadingId);
+            sendBtn.disabled = true;
 
             try {
-                // Call Anthropic API
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                // Call backend API
+                const response = await fetch('/api', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01'
                     },
                     body: JSON.stringify({
-                        model: "claude-3-5-sonnet-20241022",
-                        max_tokens: 1024,
-                        messages: conversationHistory
+                        messages: conversationHistory,
+                        apiKey: apiKey
                     })
                 });
 
@@ -414,18 +457,19 @@
 
                 // Remove loading message
                 removeLoadingMessage(loadingId);
+                sendBtn.disabled = false;
 
                 if (!response.ok) {
                     if (response.status === 401) {
                         addMessage("❌ API key invalid hai! Sahi key daal ke dubara try karo.", 'ai');
                         logout();
                     } else {
-                        addMessage(`❌ Error: ${data.error?.message || 'Kuch galat ho gaya'}`, 'ai');
+                        addMessage(`❌ Error: ${data.error || 'Kuch galat ho gaya'}`, 'ai');
                     }
                     return;
                 }
 
-                const aiMessage = data.content[0].text;
+                const aiMessage = data.message;
                 addMessage(aiMessage, 'ai');
 
                 // Add to conversation history
@@ -436,6 +480,7 @@
 
             } catch (error) {
                 removeLoadingMessage(loadingId);
+                sendBtn.disabled = false;
                 addMessage(`❌ Network Error: ${error.message}`, 'ai');
             }
         }
