@@ -1,9 +1,15 @@
 {
   "buildCommand": "npm install",
+  "outputDirectory": ".",
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/index.js"
+      "dest": "/api/index.js",
+      "methods": ["GET", "POST"]
+    },
+    {
+      "src": "/(.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2))",
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",
