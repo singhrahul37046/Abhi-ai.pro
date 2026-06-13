@@ -1,0 +1,16 @@
+{
+  "name": "abhi-ai-pro",
+  "version": "1.0.0",
+  "description": "AI chatbot with dynamic API key input",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "keywords": ["ai", "chatbot", "anthropic"],
+  "author": "singhrahul37046",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3"
+  }
+}
