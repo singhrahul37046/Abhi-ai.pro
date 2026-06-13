@@ -2,10 +2,10 @@
   "name": "abhi-ai-pro",
   "version": "1.0.0",
   "description": "AI chatbot with dynamic API key input",
-  "main": "app.js",
+  "main": "api/index.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "node app.js"
+    "start": "node api/index.js",
+    "dev": "node api/index.js"
   },
   "keywords": ["ai", "chatbot", "anthropic"],
   "author": "singhrahul37046",
